@@ -115,7 +115,7 @@ const handleWebAuthnLogin = async () => {
         // 5. 提交登录
         const res = await authService.handleWebAuthnLogin(payload, keyId) as any;
 
-        if (res && (res.errcode === 0 || !res.errcode)) {
+        if (res.authenticated) {
             uni.showToast({ title: "Passkey 登录成功", icon: "success" });
             uni.reLaunch({ url: "/pages/user/me" });
         } else {

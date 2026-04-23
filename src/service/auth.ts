@@ -1,5 +1,5 @@
 import { loginApi, userinfoApi, webAuthnLogin } from "@/api/auth";
-import type { TokenDTO } from "@/types";
+import type { ApiResponse, TokenDTO } from "@/types";
 
 export class AuthServie {
     async getUserinfo() {
@@ -11,23 +11,19 @@ export class AuthServie {
     }
 
     async handleWebAuthnLogin(payload: any, keyId: string) {
-
         const res = await webAuthnLogin(payload, keyId)
         await this.handleLoginResponse(res)
         return res
     }
 
-    private async handleLoginResponse(res: any) {
-        if (!res || res.errcode !== 0) {
+    private async handleLoginResponse(res: ApiResponse<TokenDTO>) {
+        if (!res || res.errcode !== 0 || res.data == null) {
             return
         }
-
-        if (res.data) {
-            this.storeToken(res.data)
-            const userinfoRes = await this.getUserinfo()
-            if (userinfoRes.errcode === 0 && userinfoRes.data) {
-                uni.setStorageSync("userinfo", userinfoRes.data)
-            }
+        this.storeToken(res.data)
+        const userinfoRes = await this.getUserinfo()
+        if (userinfoRes.errcode === 0 && userinfoRes.data) {
+            uni.setStorageSync("userinfo", userinfoRes.data)
         }
     }
     storeToken(token: TokenDTO) {

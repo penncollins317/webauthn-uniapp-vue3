@@ -45,8 +45,8 @@ export const requestAuthenticationOptions = (keyId: string) => {
 
 // /login/webauthn
 export const webAuthnLogin = (data: any, keyId: string) => {
-    return request({
-        url: '/login/webauthn?x-key-id=' + keyId,
+    return request<ApiResponse<TokenDTO>>({
+        url: '/api/login/webauthn?x-key-id=' + keyId,
         method: 'POST',
         data,
     })
