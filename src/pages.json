@@ -17,6 +17,30 @@
 			"style": {
 				"navigationBarTitleText": "我的"
 			}
+		},
+		{
+			"path": "pages/user/contact",
+			"style": {
+				"navigationBarTitleText": "通讯录"
+			}
+		},
+		{
+			"path": "pages/user/user_card",
+			"style": {
+				"navigationBarTitleText": "用户卡片"
+			}
+		},
+		{
+			"path": "pages/live/live",
+			"style": {
+				"navigationBarTitleText": "直播"
+			}
+		},
+		{
+			"path": "pages/chat/conversations",
+			"style": {
+				"navigationBarTitleText": "聊天"
+			}
 		}
 	],
 	"globalStyle": {

@@ -6,7 +6,12 @@
     </view>
     <view>
 
-      <button @click="goLogin">登录</button>
+      <navigator url="/pages/login/login">
+        <button>登录</button>
+      </navigator>
+      <navigator url="/pages/live/live">
+        <button>开启直播</button>
+      </navigator>
     </view>
   </view>
 </template>
@@ -14,11 +19,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 const title = ref('Hello')
-const goLogin = () => {
-  uni.navigateTo({
-    url: '/pages/login/login'
-  })
-}
+
 </script>
 
 <style>

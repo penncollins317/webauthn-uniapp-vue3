@@ -1,20 +1,33 @@
 <template>
     <view class="container">
-        <view v-if="userInfo" class="user-card">
-            <image v-if="userInfo.avatarUrl" :src="userInfo.avatarUrl" class="avatar" />
-            <view class="info">
-                <view class="nickname">{{ userInfo.nickname }}</view>
-                <view class="username">@{{ userInfo.username }}</view>
+        <view v-if="userInfo">
+            <view class="user-card">
+                <image v-if="userInfo.avatarUrl" :src="userInfo.avatarUrl" class="avatar" />
+                <view class="info">
+                    <view class="nickname">{{ userInfo.nickname }}</view>
+                    <view class="username">@{{ userInfo.username }}</view>
+                </view>
+            </view>
+            <view>
+                <navigator url="/pages/user/contact">
+                    <button>通讯录</button>
+                </navigator>
+                <navigator url="/pages/chat/conversations">
+                    <button>聊天</button>
+                </navigator>
+                <button @click="startAuth">PassKey</button>
             </view>
         </view>
+
 
         <view v-else class="empty">
             未登录，正在跳转...
         </view>
-        <button @click="startAuth">开始认证</button>
+
         <button class="logout-btn" @click="handleLogout">
             退出登录
         </button>
+
     </view>
 </template>
 
