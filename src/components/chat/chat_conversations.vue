@@ -1,5 +1,15 @@
 <template>
     <view class="conv-list-container">
+        <!-- Status Bar -->
+        <view class="status-bar"></view>
+
+        <!-- Navbar -->
+        <view class="nav-bar">
+            <text class="title">聊天</text>
+            <view class="right-icons">
+                <uni-icons type="plusempty" size="24" color="#000"></uni-icons>
+            </view>
+        </view>
         <!-- Search Bar -->
         <view class="search-box">
             <view class="search-inner">
@@ -10,12 +20,7 @@
 
         <!-- Conversation List -->
         <scroll-view scroll-y class="conv-list">
-            <view 
-                v-for="conv in conversations" 
-                :key="conv.id" 
-                class="conv-item"
-                @tap="$emit('select', conv)"
-            >
+            <view v-for="conv in conversations" :key="conv.id" class="conv-item" @tap="$emit('select', conv)">
                 <view class="avatar-wrap">
                     <image :src="conv.avatarUrl || defaultAvatar" mode="aspectFill" class="avatar"></image>
                     <view v-if="conv.unreadCount > 0" class="badge">
@@ -29,7 +34,8 @@
                     </view>
                     <view class="bottom-row">
                         <text class="last-msg">{{ getLastMsgSnippet(conv) }}</text>
-                        <uni-icons v-if="conv.status === 'muted'" type="sound-filled" size="14" color="#ccc"></uni-icons>
+                        <uni-icons v-if="conv.status === 'muted'" type="sound-filled" size="14"
+                            color="#ccc"></uni-icons>
                     </view>
                 </view>
             </view>
@@ -38,7 +44,7 @@
             <view v-if="conversations.length === 0" class="empty-state">
                 <text>暂无聊天消息</text>
             </view>
-            
+
             <view class="safe-bottom"></view>
         </scroll-view>
     </view>
@@ -140,6 +146,32 @@ const getLastMsgSnippet = (conv: ConversationDTO) => {
     flex-direction: column;
     height: 100%;
     background-color: #fff;
+}
+
+.status-bar {
+    height: var(--status-bar-height);
+    background-color: #ededed;
+}
+
+.nav-bar {
+    height: 88rpx;
+    background-color: #ededed;
+    display: flex;
+    align-items: center;
+    padding: 0 30rpx;
+    justify-content: center;
+    position: relative;
+}
+
+.nav-bar .title {
+    font-size: 34rpx;
+    font-weight: 500;
+    color: #000;
+}
+
+.nav-bar .right-icons {
+    position: absolute;
+    right: 30rpx;
 }
 
 .search-box {

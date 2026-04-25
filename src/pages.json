@@ -39,7 +39,8 @@
 		{
 			"path": "pages/chat/conversations",
 			"style": {
-				"navigationBarTitleText": "聊天"
+				"navigationBarTitleText": "聊天",
+				"navigationStyle": "custom"
 			}
 		}
 	],

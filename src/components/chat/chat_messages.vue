@@ -5,9 +5,14 @@
         <view class="msg-list">
             <view v-for="(msg, index) in messages" :key="msg.id" :id="'msg-' + msg.id" class="msg-item"
                 :class="{ 'msg-mine': msg.isMine }">
-                <image :src="msg.avatar" class="avatar" mode="aspectFill"></image>
-                <view class="bubble">
-                    <text>{{ msg.text }}</text>
+                <view class="avatar-container">
+                    <image :src="msg.avatar" class="avatar" mode="aspectFill"></image>
+                </view>
+                <view class="content-container">
+                    <view v-if="!msg.isMine" class="user-name">{{ msg.userName || 'User' }}</view>
+                    <view class="bubble">
+                        <text class="msg-text">{{ msg.text }}</text>
+                    </view>
                 </view>
             </view>
         </view>
@@ -17,13 +22,14 @@
 
 <script lang="ts" setup>
 import { ref, watch, nextTick } from 'vue';
-import type { MessageDTO } from '@/types';
 
 interface Message {
     id: string;
     text: string;
     isMine: boolean;
     avatar: string;
+    userName?: string;
+    createdAt?: string;
 }
 
 const props = defineProps<{
@@ -48,10 +54,10 @@ const onRefresh = async () => {
 
 const onScrollToUpper = () => {
     if (loadingHistory.value || isFirstLoad) return;
-    
+
     loadingHistory.value = true;
     emit('loadHistory');
-    
+
     // Reset loading flag after a delay to allow data to load
     setTimeout(() => {
         loadingHistory.value = false;
@@ -86,7 +92,7 @@ watch(() => props.messages, (newVal, oldVal) => {
 
     if (newVal.length > oldVal.length) {
         // Check if it's a new message at the end
-        const isNewMessageAtEnd = newVal[0].id === oldVal[0].id;
+        const isNewMessageAtEnd = (newVal[0] && oldVal[0]) ? newVal[0].id === oldVal[0].id : true;
 
         if (isNewMessageAtEnd) {
             scrollToBottom();
@@ -95,11 +101,11 @@ watch(() => props.messages, (newVal, oldVal) => {
             const firstOldMsgId = oldVal[0].id;
             // Temporarily disable animation to avoid jumping visual
             useAnimation.value = false;
-            
+
             nextTick(() => {
                 // Scroll to the message that was previously at the top
                 scrollToId.value = 'msg-' + firstOldMsgId;
-                
+
                 // Re-enable animation after position is set
                 setTimeout(() => {
                     useAnimation.value = true;
@@ -117,12 +123,13 @@ defineExpose({
 
 <style scoped>
 .msg-scroll {
-    flex: 1;
-    height: 0;
+    width: 100%;
+    height: 100%;
+    background-color: #ededed;
 }
 
 .msg-list {
-    padding: 20rpx 30rpx;
+    padding: 30rpx;
 }
 
 .msg-item {
@@ -131,21 +138,40 @@ defineExpose({
     align-items: flex-start;
 }
 
+.avatar-container {
+    flex-shrink: 0;
+}
+
 .avatar {
-    width: 80rpx;
-    height: 80rpx;
+    width: 84rpx;
+    height: 84rpx;
     border-radius: 8rpx;
     background-color: #fff;
 }
 
+.content-container {
+    display: flex;
+    flex-direction: column;
+    margin-left: 20rpx;
+    max-width: 75%;
+}
+
+.user-name {
+    font-size: 24rpx;
+    color: #888;
+    margin-bottom: 8rpx;
+}
+
 .bubble {
-    max-width: 70%;
     background-color: #fff;
     padding: 20rpx 24rpx;
     border-radius: 12rpx;
-    margin-left: 20rpx;
     position: relative;
     word-break: break-all;
+    min-height: 40rpx;
+    display: flex;
+    align-items: center;
+    transition: all 0.2s ease-in-out;
 }
 
 .bubble::before {
@@ -158,13 +184,24 @@ defineExpose({
     border-right: 14rpx solid #fff;
 }
 
+.msg-text {
+    font-size: 32rpx;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* Mine message styles */
 .msg-mine {
     flex-direction: row-reverse;
 }
 
-.msg-mine .bubble {
+.msg-mine .content-container {
     margin-left: 0;
     margin-right: 20rpx;
+    align-items: flex-end;
+}
+
+.msg-mine .bubble {
     background-color: #95ec69;
 }
 
@@ -176,6 +213,6 @@ defineExpose({
 }
 
 .safe-bottom-padding {
-    height: 40rpx;
+    height: calc(40rpx + env(safe-area-inset-bottom));
 }
 </style>

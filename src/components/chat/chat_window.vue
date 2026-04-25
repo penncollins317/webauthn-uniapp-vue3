@@ -1,5 +1,8 @@
 <template>
     <view class="message-window">
+        <!-- Status Bar Placeholder -->
+        <view class="status-bar"></view>
+
         <!-- Navbar -->
         <view class="nav-bar">
             <view class="left-action" @tap="$emit('close')">
@@ -11,20 +14,16 @@
             </view>
         </view>
 
-        <!-- Message List Component -->
-        <ChatMessages :messages="formattedMessages" @loadHistory="$emit('loadHistory')" />
+        <!-- Message List Area -->
+        <view class="messages-container">
+            <ChatMessages :messages="formattedMessages" @loadHistory="$emit('loadHistory')" />
+        </view>
 
         <!-- Input Area -->
-        <view class="input-area" :style="{ bottom: keyboardHeight + 'px' }">
+        <view class="input-area">
             <view class="input-inner">
                 <uni-icons type="mic-filled" size="28" color="#000"></uni-icons>
-                <input 
-                    class="input-box" 
-                    v-model="inputText" 
-                    placeholder="" 
-                    confirm-type="send"
-                    @confirm="sendMessage"
-                />
+                <input class="input-box" v-model="inputText" placeholder="" confirm-type="send" />
                 <uni-icons type="shop-filled" size="28" color="#000"></uni-icons>
                 <uni-icons v-if="!inputText" type="plus-filled" size="28" color="#000"></uni-icons>
                 <view v-else class="send-btn" @tap="sendMessage">发送</view>
@@ -42,18 +41,16 @@ import type { ConversationDTO, MessageDTO } from '@/types';
 const props = defineProps<{
     conversation: ConversationDTO | null;
     messages: MessageDTO[];
+    currentUser?: any;
 }>();
 
 const emit = defineEmits(['close', 'send', 'loadHistory']);
 
 const inputText = ref('');
-const keyboardHeight = ref(0);
 
 // Helper to parse payload and determine if mine
 const formattedMessages = computed(() => {
-    // Ideally we get this from a store, but for now we'll assume a value
-    const myId = uni.getStorageSync('userId') || ''; 
-    
+    const myId = props.currentUser?.id || uni.getStorageSync('userId') || '';
     return props.messages.map(m => {
         let text = m.payload;
         try {
@@ -62,23 +59,21 @@ const formattedMessages = computed(() => {
         } catch (e) {
             // Not JSON, use as is
         }
-        
         const isMine = m.userId === myId;
-        
         return {
             id: m.id,
             text,
             isMine,
-            avatar: isMine 
-                ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=Me' 
-                : (props.conversation?.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=other')
+            avatar: isMine
+                ? (props.currentUser?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Me')
+                : (props.conversation?.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=other'),
+            userName: isMine ? (props.currentUser?.nickname || props.currentUser?.username || '我') : (props.conversation?.name || '对方')
         };
     });
 });
 
 const sendMessage = () => {
     if (!inputText.value.trim()) return;
-    
     emit('send', inputText.value);
     inputText.value = '';
 };
@@ -89,7 +84,14 @@ const sendMessage = () => {
     display: flex;
     flex-direction: column;
     height: 100%;
+    width: 100%;
     background-color: #ededed;
+}
+
+.status-bar {
+    height: var(--status-bar-height);
+    background-color: #ededed;
+    flex-shrink: 0;
 }
 
 .nav-bar {
@@ -101,9 +103,17 @@ const sendMessage = () => {
     border-bottom: 1rpx solid #d1d1d1;
     position: relative;
     z-index: 10;
+    flex-shrink: 0;
 }
 
-.left-action, .right-action {
+.messages-container {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
+.left-action,
+.right-action {
     width: 60rpx;
 }
 
@@ -119,6 +129,7 @@ const sendMessage = () => {
     background-color: #f7f7f7;
     border-top: 1rpx solid #d1d1d1;
     padding: 16rpx 20rpx;
+    flex-shrink: 0;
 }
 
 .input-inner {

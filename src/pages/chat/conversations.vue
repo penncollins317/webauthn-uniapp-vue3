@@ -6,28 +6,25 @@
         <!-- Chat Message Window Overlay -->
         <transition name="slide">
             <view v-if="showChat" class="chat-window-wrapper">
-                <ChatWindow 
-                    :conversation="selectedConv" 
-                    :messages="messages"
-                    @close="showChat = false" 
-                    @send="handleSend"
-                    @loadHistory="fetchHistoryMessages"
-                />
+                <ChatWindow :conversation="selectedConv" :messages="messages" :currentUser="currentUser"
+                    @close="showChat = false" @send="handleSend" @loadHistory="fetchHistoryMessages" />
             </view>
         </transition>
     </view>
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import ChatConversations from '@/components/chat/chat_conversations.vue';
 import ChatWindow from '@/components/chat/chat_window.vue';
 import type { ConversationDTO, MessageDTO } from '@/types';
 import { getMessages, sendMessage } from '@/api/chat';
+import { userinfoApi } from '@/api/auth';
 
 const showChat = ref(false);
 const selectedConv = ref<ConversationDTO | null>(null);
 const messages = ref<MessageDTO[]>([]);
+const currentUser = ref<any>(null);
 
 const onSelectConversation = async (conv: ConversationDTO) => {
     selectedConv.value = conv;
@@ -48,16 +45,16 @@ const fetchMessages = async (conversationId: string) => {
 
 const fetchHistoryMessages = async () => {
     if (!selectedConv.value || messages.value.length === 0) return;
-    
+
     const firstMsg = messages.value[0];
     try {
-        const res = await getMessages({ 
-            conversationId: selectedConv.value.id, 
+        const res = await getMessages({
+            conversationId: selectedConv.value.id,
             limit: 20,
             anchorMessageId: firstMsg.id,
             direction: 'BEFORE'
         });
-        
+
         if (res.data && res.data.length > 0) {
             // Prepend historical messages
             messages.value = [...res.data, ...messages.value];
@@ -69,7 +66,7 @@ const fetchHistoryMessages = async () => {
 
 const handleSend = async (text: string) => {
     if (!selectedConv.value) return;
-    
+
     const payload = JSON.stringify({ text });
     try {
         const res = await sendMessage({
@@ -77,7 +74,7 @@ const handleSend = async (text: string) => {
             payload: payload,
             referenceId: null
         });
-        
+
         if (res.data) {
             // Append the new message to the list
             messages.value = [...messages.value, res.data];
@@ -86,13 +83,34 @@ const handleSend = async (text: string) => {
         console.error('Failed to send message', e);
     }
 };
+
+
+onMounted(async () => {
+    try {
+        const res = await userinfoApi()
+        currentUser.value = res.data
+        // Optionally sync to storage if not already there
+        if (res.data?.id) {
+            uni.setStorageSync('userId', res.data.id);
+        }
+    } catch (e) {
+        console.error('Failed to fetch user info', e)
+    }
+})
 </script>
+
+<style>
+/* Global style to ensure the page fills the screen in H5 */
+page {
+    height: 100%;
+}
+</style>
 
 <style scoped>
 .page-container {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
 }
 
