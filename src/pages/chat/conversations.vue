@@ -82,8 +82,11 @@ const handleSend = async (text: string) => {
         });
 
         if (res.data) {
-            // Append the new message to the list
-            messages.value = [...messages.value, res.data];
+            // Avoid duplicate messages if the WebSocket already added it
+            const exists = messages.value.some(m => String(m.id) == String(res.data.id));
+            if (!exists) {
+                messages.value = [...messages.value, res.data];
+            }
         }
     } catch (e) {
         console.error('Failed to send message', e);
@@ -115,10 +118,22 @@ onUnmounted(() => {
 
 const handleIncomingMessage = async (payload: ChatMessagePayload) => {
     console.log('Received new message notification', payload);
+    // Refresh conversation list snippet regardless of sender
+    if (convListRef.value) {
+        convListRef.value.fetchConversations(false);
+    }
+
     // If current chat is open and matches conversationId
-    if (showChat.value && selectedConv.value?.id === payload.conversationId) {
-        // Avoid duplicate messages (e.g., if we sent it ourselves)
-        const exists = messages.value.some(m => m.id === payload.messageId);
+    if (showChat.value && selectedConv.value?.id == payload.conversationId) {
+        // If I am the sender, handleSend already manages the message list update.
+        // Skipping here to avoid race conditions and double-adding.
+        if (payload.senderId == currentUser.value?.id) {
+            await readMessage(payload.conversationId, payload.messageId);
+            return;
+        }
+
+        // Avoid duplicate messages
+        const exists = messages.value.some(m => String(m.id) == String(payload.messageId));
         if (!exists) {
             try {
                 const res = await getMessage(payload.messageId);
@@ -127,17 +142,11 @@ const handleIncomingMessage = async (payload: ChatMessagePayload) => {
                 }
             } catch (e) {
                 console.error('Failed to fetch message details', e);
-                // Fallback to fetching all latest messages
                 await fetchMessages(payload.conversationId);
             }
         }
-        // Mark as read if window is active
+        // Mark as read
         await readMessage(payload.conversationId, payload.messageId);
-    }
-
-    // Refresh conversation list silently
-    if (convListRef.value) {
-        convListRef.value.fetchConversations(false);
     }
 };
 </script>
