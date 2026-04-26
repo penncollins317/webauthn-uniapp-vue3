@@ -23,7 +23,8 @@
         <view class="input-area">
             <view class="input-inner">
                 <uni-icons type="mic-filled" size="28" color="#000"></uni-icons>
-                <input class="input-box" v-model="inputText" placeholder="" confirm-type="send" />
+                <input class="input-box" v-model="inputText" placeholder="" confirm-type="send"
+                    :focus="inputFocus" :confirm-hold="true" @confirm="sendMessage" />
                 <uni-icons type="shop-filled" size="28" color="#000"></uni-icons>
                 <uni-icons v-if="!inputText" type="plus-filled" size="28" color="#000"></uni-icons>
                 <view v-else class="send-btn" @tap="sendMessage">发送</view>
@@ -34,7 +35,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import ChatMessages from './chat_messages.vue';
 import type { ConversationDTO, MessageDTO } from '@/types';
 
@@ -47,6 +48,7 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'send', 'loadHistory']);
 
 const inputText = ref('');
+const inputFocus = ref(false);
 
 // Helper to parse payload and determine if mine
 const formattedMessages = computed(() => {
@@ -67,7 +69,8 @@ const formattedMessages = computed(() => {
             avatar: isMine
                 ? (props.currentUser?.avatarUrl || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Me')
                 : (props.conversation?.avatarUrl || 'https://api.dicebear.com/7.x/bottts/svg?seed=other'),
-            userName: isMine ? (props.currentUser?.nickname || props.currentUser?.username || '我') : (props.conversation?.name || '对方')
+            userName: isMine ? (props.currentUser?.nickname || props.currentUser?.username || '我') : (props.conversation?.name || '对方'),
+            createdAt: m.createdAt
         };
     });
 });
@@ -76,7 +79,14 @@ const sendMessage = () => {
     if (!inputText.value.trim()) return;
     emit('send', inputText.value);
     inputText.value = '';
+
+    // Keep focus
+    inputFocus.value = false;
+    nextTick(() => {
+        inputFocus.value = true;
+    });
 };
+
 </script>
 
 <style scoped>

@@ -141,13 +141,10 @@ const fetchConversations = async (showLoading = true) => {
     }
 };
 
+import { formatShortTime } from '@/utils/time';
+
 const formatTime = (timeStr: string) => {
-    const date = new Date(timeStr);
-    const now = new Date();
-    if (date.toDateString() === now.toDateString()) {
-        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
-    }
-    return `${date.getMonth() + 1}月${date.getDate()}日`;
+    return formatShortTime(timeStr);
 };
 
 const getLastMsgSnippet = (conv: ConversationDTO) => {
