@@ -62,51 +62,7 @@ const conversations = ref<ConversationDTO[]>([]);
 const lastMessagesMap = ref<Record<string, string>>({});
 const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=default';
 
-// Mock data as fallback
-const mockConversations: ConversationDTO[] = [
-    {
-        id: '1',
-        name: '文件传输助手',
-        avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=file',
-        unreadCount: 0,
-        updatedAt: new Date().toISOString(),
-        lastMessageId: 'm1',
-        lastSeq: '1',
-        pairKey: '',
-        status: 'normal',
-        type: 'helper',
-        createdAt: '',
-        createdUid: ''
-    },
-    {
-        id: '2',
-        name: '张三',
-        avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zhang',
-        unreadCount: 3,
-        updatedAt: new Date(Date.now() - 3600000).toISOString(),
-        lastMessageId: 'm2',
-        lastSeq: '2',
-        pairKey: '',
-        status: 'normal',
-        type: 'p2p',
-        createdAt: '',
-        createdUid: ''
-    },
-    {
-        id: '3',
-        name: '微信团队',
-        avatarUrl: 'https://api.dicebear.com/7.x/bottts/svg?seed=wechat',
-        unreadCount: 1,
-        updatedAt: new Date(Date.now() - 86400000).toISOString(),
-        lastMessageId: 'm3',
-        lastSeq: '3',
-        pairKey: '',
-        status: 'normal',
-        type: 'helper',
-        createdAt: '',
-        createdUid: ''
-    }
-];
+
 
 onMounted(() => {
     fetchConversations();
@@ -134,10 +90,10 @@ const fetchConversations = async (showLoading = true) => {
                 }
             });
         } else {
-            conversations.value = mockConversations;
+            conversations.value = [];
         }
     } catch (e) {
-        conversations.value = mockConversations;
+        conversations.value = [];
     }
 };
 

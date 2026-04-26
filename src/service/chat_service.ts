@@ -31,9 +31,24 @@ class ChatNotificationService {
         }
 
         let baseUrl = import.meta.env.VITE_SERVER_URL;
-        if (baseUrl.startsWith('http')) {
+
+        // #ifdef H5
+        // Web/H5 环境：根据当前页面的协议动态判断
+        if (baseUrl.startsWith('/')) {
+            baseUrl = window.location.origin + baseUrl;
+        }
+        const isHttps = window.location.protocol === 'https:';
+        baseUrl = baseUrl.replace(/^https?:/, isHttps ? 'wss:' : 'ws:');
+        // #endif
+
+        // #ifndef H5
+        // 小程序/App 环境：根据配置的 http/https 协议转换
+        if (baseUrl.startsWith('https')) {
+            baseUrl = baseUrl.replace('https', 'wss');
+        } else if (baseUrl.startsWith('http')) {
             baseUrl = baseUrl.replace('http', 'ws');
         }
+        // #endif
 
         const url = `${baseUrl}/ws/notifications?access_token=${token}`;
         console.log('[ChatSDK] Connecting to:', url);
@@ -159,4 +174,4 @@ class ChatNotificationService {
     }
 }
 
-export const chatNotificationService = new ChatNotificationService();
+export const chatNotificationService = new ChatNotificationService();

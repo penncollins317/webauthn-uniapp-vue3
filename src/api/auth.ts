@@ -12,6 +12,17 @@ export const loginApi = (username: string, password: string) => {
         }
     })
 }
+
+export const refreshTokenApi = (refreshToken: string) => {
+    return request<ApiResponse<TokenDTO>>({
+        url: '/api/auth/refresh',
+        method: 'POST',
+        data: {
+            token: refreshToken
+        }
+    })
+}
+
 export const userinfoApi = () => {
     return request<ApiResponse<UserInfoDTO>>({
         url: '/api/userinfo',

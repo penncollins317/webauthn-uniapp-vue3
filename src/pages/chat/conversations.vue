@@ -81,11 +81,11 @@ const handleSend = async (text: string) => {
             referenceId: null
         });
 
-        if (res.data) {
-            // Avoid duplicate messages if the WebSocket already added it
-            const exists = messages.value.some(m => String(m.id) == String(res.data.id));
+        if (res.data && res.data.id) {
+            const data = res.data;
+            const exists = messages.value.some(m => String(m.id) == String(data.id));
             if (!exists) {
-                messages.value = [...messages.value, res.data];
+                messages.value = [...messages.value, data];
             }
         }
     } catch (e) {
