@@ -1,4 +1,4 @@
-import type { ApiResponse, TokenDTO, UserInfoDTO } from '@/types'
+import type { ApiResponse, TokenDTO, UserInfoDTO, UserPasskey } from '@/types'
 import request from '../utils/request'
 
 
@@ -9,6 +9,15 @@ export const loginApi = (username: string, password: string) => {
         data: {
             username,
             password
+        }
+    })
+}
+export const wxloginApi = (code: string) => {
+    return request<ApiResponse<TokenDTO>>({
+        url: '/login/wechat/mini',
+        method: 'POST',
+        data: {
+            code
         }
     })
 }
@@ -60,5 +69,33 @@ export const webAuthnLogin = (data: any, keyId: string) => {
         url: '/api/login/webauthn?x-key-id=' + keyId,
         method: 'POST',
         data,
+    })
+}
+
+export const getUserPasskeys = () => {
+    return request<ApiResponse<UserPasskey[]>>({
+        url: '/api/passkeys',
+        method: 'GET',
+    })
+}
+
+// DELETE /api/passkeys/{credentialId}
+export const deleteUserPasskey = (credentialId: string) => {
+    return request({
+        url: '/api/passkeys/' + credentialId,
+        method: 'DELETE',
+    })
+}
+
+
+export const searchUsers = (page: number, size: number, keyword: string) => {
+    return request({
+        url: '/api/user/search',
+        method: 'GET',
+        data: {
+            page,
+            size,
+            keyword
+        }
     })
 }

@@ -4,7 +4,7 @@
         <view class="search-box">
             <view class="search-inner">
                 <uni-icons type="search" size="18" color="#999"></uni-icons>
-                <text class="search-placeholder">搜索</text>
+                <input class="search-input" v-model="keyword" placeholder="搜索" @input="onSearch" />
             </view>
         </view>
 
@@ -50,8 +50,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { searchUsers } from '@/api/auth'
 
 const scrollInto = ref('')
+const keyword = ref('')
 
 const headerItems = [
     { name: '新的朋友', icon: 'personadd-filled', color: '#fa9d3b' },
@@ -61,67 +63,36 @@ const headerItems = [
     { name: '公众号', icon: 'auth-filled', color: '#10aeff' }
 ]
 
-const alphabet = ['↑', '☆', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '#']
+const alphabet = ['↑', '☆', '#']
 
-const contactGroups = ref([
-    {
-        letter: 'A',
-        list: [
-            { id: 1, name: '阿强', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Aqiang' },
-            { id: 2, name: '艾达', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ada' }
-        ]
-    },
-    {
-        letter: 'B',
-        list: [
-            { id: 3, name: '白居易', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bai' },
-            { id: 4, name: '波波', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bobo' }
-        ]
-    },
-    {
-        letter: 'C',
-        list: [
-            { id: 5, name: '陈奕迅', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Eason' }
-        ]
-    },
-    {
-        letter: 'D',
-        list: [
-            { id: 6, name: '杜甫', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Dufu' },
-            { id: 7, name: '大卫', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=David' }
-        ]
-    },
-    {
-        letter: 'L',
-        list: [
-            { id: 8, name: '李白', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Libai' },
-            { id: 9, name: '林俊杰', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=JJ' },
-            { id: 10, name: '刘德华', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Andy' }
-        ]
-    },
-    {
-        letter: 'W',
-        list: [
-            { id: 13, name: '王力宏', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Leehom' },
-            { id: 14, name: '吴彦祖', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Daniel' }
-        ]
-    },
-    {
-        letter: 'Z',
-        list: [
-            { id: 11, name: '张学友', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jacky' },
-            { id: 12, name: '周杰伦', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jay' }
-        ]
-    }
-])
+const contactGroups = ref([])
 
 const totalContacts = ref(0)
+
+const onSearch = async () => {
+    try {
+        const res = await searchUsers(1, 100, keyword.value)
+        if (res && res.data) {
+            const users = res.data.records || res.data || []
+            contactGroups.value = [
+                {
+                    letter: '#',
+                    list: users.map(u => ({
+                        id: u.id,
+                        name: u.username || u.name || u.nickname,
+                        avatar: u.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${u.username || u.id}`
+                    }))
+                }
+            ]
+            totalContacts.value = users.length
+        }
+    } catch (e) {
+        console.error(e)
+    }
+}
+
 onMounted(() => {
-    let count = 0
-    contactGroups.value.forEach(g => {
-        count += g.list.length
-    })
-    totalContacts.value = count
+    onSearch()
 })
 
 const scrollToLetter = (letter) => {
@@ -165,13 +136,15 @@ const handleHeaderClick = (item) => {
     border-radius: 8rpx;
     display: flex;
     align-items: center;
-    justify-content: center;
+    padding: 0 16rpx;
     gap: 8rpx;
 }
 
-.search-placeholder {
-    color: #999;
+.search-input {
+    flex: 1;
     font-size: 28rpx;
+    color: #333;
+    background: transparent;
 }
 
 .contact-list {

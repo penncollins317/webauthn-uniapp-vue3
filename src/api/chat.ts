@@ -40,4 +40,12 @@ export const readMessage = (conversationId: string, messageId: string): Promise<
         params: { messageId }
     })
 }
-
+
+// POST /api/chat/conversations
+export const createConversation = (data: { type: string; memberIds: string[]; name: string }): Promise<ApiResponse<ConversationDTO>> => {
+    return request({
+        url: "/api/chat/conversations",
+        method: 'POST',
+        data
+    })
+}

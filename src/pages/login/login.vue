@@ -22,8 +22,13 @@
             </button>
 
             <!-- WebAuthn 登录 -->
+
             <button class="webauthn-btn" @click="handleWebAuthnLogin">
                 Passkey 登录
+            </button>
+
+            <button class="wx-btn" @click="handleWXLogin">
+                微信登录
             </button>
         </view>
     </view>
@@ -32,13 +37,31 @@
 <script setup lang="ts">
 import { AuthServie } from "@/service";
 import { reactive } from "vue";
-import { requestAuthenticationOptions, webAuthnLogin } from "@/api/auth";
+import { requestAuthenticationOptions } from "@/api/auth";
 import { withLoading } from "@/utils/request";
 import { generateUUID } from "@/utils/uuid";
 import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from "@/utils/webauthn";
 
 const authService = new AuthServie()
 
+const handleWXLogin = async () => {
+    uni.login({
+        provider: 'weixin',
+        success: async (res) => {
+            if (res.code) {
+                const result = await authService.loginWithWechat(res.code)
+                if (result.errcode === 0) {
+                    uni.navigateTo({
+                        url: "/pages/user/me"
+                    })
+                }
+            }
+        },
+        fail: (err) => {
+            console.error(err)
+        }
+    })
+}
 
 const form = reactive({
     username: "",
@@ -76,6 +99,13 @@ const handleLogin = async () => {
 };
 
 const handleWebAuthnLogin = async () => {
+    if (!window?.navigator?.credentials) {
+        uni.showToast({
+            title: "当前环境不支持 Passkey",
+            icon: "none"
+        });
+        return;
+    }
     const keyId = generateUUID();
     try {
         // 1. 获取认证选项

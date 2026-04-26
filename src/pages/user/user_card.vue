@@ -55,6 +55,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
+import { createConversation } from '@/api/chat'
 
 const userInfo = ref({
     id: '',
@@ -87,11 +88,27 @@ const handleAction = (type) => {
     })
 }
 
-const sendMessage = () => {
-    uni.showToast({
-        title: '发起聊天...',
-        icon: 'none'
-    })
+const sendMessage = async () => {
+    try {
+        uni.showLoading({ title: '发起中...' })
+        const res = await createConversation({
+            type: 'USER',
+            memberIds: [userInfo.value.id],
+            name: userInfo.value.name || 'Chat'
+        })
+        uni.hideLoading()
+        if (res.data) {
+            uni.navigateTo({
+                url: `/pages/chat/chat_window?conversationId=${res.data.id}&name=${encodeURIComponent(res.data.name || userInfo.value.name)}`
+            })
+        }
+    } catch (e) {
+        uni.hideLoading()
+        uni.showToast({
+            title: '发起聊天失败',
+            icon: 'none'
+        })
+    }
 }
 
 const makeCall = () => {

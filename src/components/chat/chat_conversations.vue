@@ -5,9 +5,14 @@
 
         <!-- Navbar -->
         <view class="nav-bar">
+            <view class="nav-left">
+                <button class="nav-bar-btn" @click="navBack">
+                    <uni-icons type="left" size="24" color="#000"></uni-icons>
+                </button>
+            </view>
             <text class="title">聊天</text>
-            <view class="right-icons">
-                <uni-icons type="plusempty" size="24" color="#000"></uni-icons>
+            <view class="nav-right">
+                <uni-icons type="plus" size="26" color="#000"></uni-icons>
             </view>
         </view>
         <!-- Search Bar -->
@@ -62,6 +67,9 @@ const conversations = ref<ConversationDTO[]>([]);
 const lastMessagesMap = ref<Record<string, string>>({});
 const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=default';
 
+const navBack = () => {
+    uni.navigateBack();
+}
 
 
 onMounted(() => {
@@ -128,28 +136,56 @@ defineExpose({
 
 .status-bar {
     height: var(--status-bar-height);
-    background-color: #ededed;
+    background-color: #f7f7f7;
 }
 
 .nav-bar {
     height: 88rpx;
-    background-color: #ededed;
+    background: linear-gradient(to bottom, #f7f7f7, #ededed);
     display: flex;
     align-items: center;
     padding: 0 30rpx;
-    justify-content: center;
     position: relative;
+    border-bottom: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.nav-left, .nav-right {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    z-index: 10;
+}
+
+.nav-left {
+    left: 20rpx;
+}
+
+.nav-right {
+    right: 30rpx;
+}
+
+.nav-bar-btn {
+    background: transparent;
+    padding: 10rpx;
+    margin: 0;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-bar-btn::after {
+    border: none;
 }
 
 .nav-bar .title {
+    width: 100%;
+    text-align: center;
     font-size: 34rpx;
     font-weight: 500;
     color: #000;
-}
-
-.nav-bar .right-icons {
-    position: absolute;
-    right: 30rpx;
 }
 
 .search-box {
@@ -160,11 +196,18 @@ defineExpose({
 .search-inner {
     background-color: #ffffff;
     height: 72rpx;
-    border-radius: 8rpx;
+    border-radius: 12rpx;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8rpx;
+    transition: all 0.2s;
+    box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.02);
+}
+
+.search-inner:active {
+    background-color: #f5f5f5;
+    opacity: 0.8;
 }
 
 .search-placeholder {

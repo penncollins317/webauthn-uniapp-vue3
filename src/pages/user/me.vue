@@ -15,7 +15,9 @@
                 <navigator url="/pages/chat/conversations">
                     <button>聊天</button>
                 </navigator>
-                <button @click="startAuth">PassKey</button>
+                <navigator url="/pages/user/passkeys">
+                    <button>Passkey 管理</button>
+                </navigator>
             </view>
         </view>
 
@@ -35,81 +37,10 @@
 import { ref, onMounted } from "vue";
 import type { UserInfoDTO } from "@/types";
 import { AuthServie } from "@/service";
-import { requestRegistrationOptions, submitRegistrationResponse } from "@/api/auth";
-import { generateUUID } from "@/utils/uuid";
+
 const authService = new AuthServie()
 const userInfo = ref<UserInfoDTO | null>(null);
-import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from "@/utils/webauthn";
 
-const startAuth = async () => {
-    const keyId = generateUUID()
-    try {
-        // 1. 获取选项 (假设 res.data 是你发出来的 JSON)
-        const options = (await requestRegistrationOptions(keyId))
-
-        // 2. 解码后端传来的 Base64URL 字符串
-        // WebAuthn 挑战和 ID 通常使用 Base64URL 格式，必须正确解码
-        options.challenge = base64UrlToArrayBuffer(options.challenge);
-        options.user.id = base64UrlToArrayBuffer(options.user.id);
-        if (options.excludeCredentials) {
-            options.excludeCredentials.forEach(c => {
-                c.id = base64UrlToArrayBuffer(c.id);
-            });
-        }
-
-        // 3. 呼起生物识别
-        const credential = await navigator.credentials.create({ publicKey: options });
-
-        // 4. 关键：手动构造返回给 Spring 的 JSON
-        const clientExtensionResults = credential.getClientExtensionResults();
-
-        // 尝试获取 Transports
-        let transports = ["internal"]; // 移动端平台通常默认为 internal
-        if (credential.getResponse && typeof credential.getResponse === 'function') {
-            const response = credential.getResponse();
-            if (response.getTransports) transports = response.getTransports();
-        }
-
-        const payload = {
-            publicKey: {
-                credential: {
-                    id: credential.id, // 浏览器通常直接提供 Base64URL 格式的 ID
-                    rawId: arrayBufferToBase64Url(credential.rawId),
-                    type: credential.type,
-                    authenticatorAttachment: credential.authenticatorAttachment,
-                    response: {
-                        attestationObject: arrayBufferToBase64Url(credential.response.attestationObject),
-                        clientDataJSON: arrayBufferToBase64Url(credential.response.clientDataJSON),
-                        transports: transports
-                    },
-                    clientExtensionResults: clientExtensionResults
-                },
-                label: "My Mobile Device" // 这个 label 映射到后端的描述字段
-            }
-        };
-
-        console.log("发送给后端的数据:", JSON.stringify(payload));
-
-        // 6. 将结果发送给后端验证
-        const submitRes = await submitRegistrationResponse(payload, keyId) as any;
-
-        // 兼容处理：如果返回了 errcode 则检查是否为 0，否则认为成功（因为 request.ts 已拦截非 200）
-        const isSuccess = submitRes && (submitRes.errcode === 0 || submitRes.errcode === undefined);
-
-        if (isSuccess) {
-            uni.showToast({ title: 'Passkey 绑定成功', icon: 'success' });
-        } else {
-            uni.showToast({ title: submitRes.errmsg || '绑定失败', icon: 'none' });
-        }
-
-    } catch (err: any) {
-        console.error('WebAuthn 注册失败:', err);
-        uni.showToast({
-            title: err.message || '注册过程中发生错误',
-            icon: 'none'
-        });
-    }
-};
 // 获取用户信息
 const getUserInfo = (): UserInfoDTO | null => {
     const raw = uni.getStorageSync("userinfo");

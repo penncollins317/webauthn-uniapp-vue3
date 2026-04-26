@@ -11,3 +11,11 @@ export interface UserInfoDTO {
     nickname: string;
     avatarUrl?: string;
 }
+
+export interface UserPasskey {
+    created: string;
+    credentialId: string;
+    deviceType: string;
+    label: string;
+    lastUsed: string;
+}

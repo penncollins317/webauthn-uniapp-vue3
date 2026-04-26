@@ -42,6 +42,19 @@
 				"navigationBarTitleText": "聊天",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/chat/chat_window",
+			"style": {
+				"navigationBarTitleText": "",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/user/passkeys",
+			"style": {
+				"navigationBarTitleText": "Passkey 管理"
+			}
 		}
 	],
 	"globalStyle": {
