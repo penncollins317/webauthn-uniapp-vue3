@@ -1,7 +1,7 @@
 <template>
     <view class="page-container">
         <!-- Conversation List -->
-        <ChatConversations @select="onSelectConversation" />
+        <ChatConversations ref="convListRef" @select="onSelectConversation" />
 
         <!-- Chat Message Window Overlay -->
         <transition name="slide">
@@ -18,18 +18,24 @@ import { onMounted, ref } from 'vue';
 import ChatConversations from '@/components/chat/chat_conversations.vue';
 import ChatWindow from '@/components/chat/chat_window.vue';
 import type { ConversationDTO, MessageDTO } from '@/types';
-import { getMessages, sendMessage } from '@/api/chat';
+import { getMessages, sendMessage, readMessage, getMessage } from '@/api/chat';
 import { userinfoApi } from '@/api/auth';
+import { chatNotificationService } from '@/service/chat_service';
+import { withLoading } from '@/utils/request';
+import type { ChatMessagePayload } from '@/types';
 
 const showChat = ref(false);
 const selectedConv = ref<ConversationDTO | null>(null);
 const messages = ref<MessageDTO[]>([]);
 const currentUser = ref<any>(null);
+const convListRef = ref<any>(null);
 
 const onSelectConversation = async (conv: ConversationDTO) => {
     selectedConv.value = conv;
     showChat.value = true;
-    await fetchMessages(conv.id);
+    await withLoading(fetchMessages(conv.id));
+    await readMessage(conv.id, messages.value[messages.value.length - 1].id);
+    selectedConv.value.unreadCount = 0;
 };
 
 const fetchMessages = async (conversationId: string) => {
@@ -96,7 +102,44 @@ onMounted(async () => {
     } catch (e) {
         console.error('Failed to fetch user info', e)
     }
+
+    // 链接websocket
+    chatNotificationService.init();
+    chatNotificationService.on('CHAT_MESSAGE', handleIncomingMessage);
 })
+
+import { onUnmounted } from 'vue';
+onUnmounted(() => {
+    chatNotificationService.off('CHAT_MESSAGE', handleIncomingMessage);
+});
+
+const handleIncomingMessage = async (payload: ChatMessagePayload) => {
+    console.log('Received new message notification', payload);
+    // If current chat is open and matches conversationId
+    if (showChat.value && selectedConv.value?.id === payload.conversationId) {
+        // Avoid duplicate messages (e.g., if we sent it ourselves)
+        const exists = messages.value.some(m => m.id === payload.messageId);
+        if (!exists) {
+            try {
+                const res = await getMessage(payload.messageId);
+                if (res.data) {
+                    messages.value = [...messages.value, res.data];
+                }
+            } catch (e) {
+                console.error('Failed to fetch message details', e);
+                // Fallback to fetching all latest messages
+                await fetchMessages(payload.conversationId);
+            }
+        }
+        // Mark as read if window is active
+        await readMessage(payload.conversationId, payload.messageId);
+    }
+
+    // Refresh conversation list silently
+    if (convListRef.value) {
+        convListRef.value.fetchConversations(false);
+    }
+};
 </script>
 
 <style>

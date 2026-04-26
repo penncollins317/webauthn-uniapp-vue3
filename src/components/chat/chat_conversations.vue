@@ -52,12 +52,14 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
-import { getConversations } from '@/api/chat';
+import { getConversations, getMessage } from '@/api/chat';
+import { withLoading } from '@/utils/request';
 import type { ConversationDTO } from '@/types';
 
 defineEmits(['select']);
 
 const conversations = ref<ConversationDTO[]>([]);
+const lastMessagesMap = ref<Record<string, string>>({});
 const defaultAvatar = 'https://api.dicebear.com/7.x/bottts/svg?seed=default';
 
 // Mock data as fallback
@@ -110,11 +112,27 @@ onMounted(() => {
     fetchConversations();
 });
 
-const fetchConversations = async () => {
+const fetchConversations = async (showLoading = true) => {
     try {
-        const res = await getConversations();
+        const promise = getConversations();
+        const res = await (showLoading ? withLoading(promise) : promise);
         if (res.data && res.data.length > 0) {
             conversations.value = res.data;
+            // Background fetch last message snippets
+            res.data.forEach(conv => {
+                if (conv.lastMessageId && !lastMessagesMap.value[conv.lastMessageId]) {
+                    getMessage(conv.lastMessageId).then(msgRes => {
+                        if (msgRes.data) {
+                            try {
+                                const payload = JSON.parse(msgRes.data.payload);
+                                lastMessagesMap.value[conv.lastMessageId] = payload.text || msgRes.data.payload;
+                            } catch (e) {
+                                lastMessagesMap.value[conv.lastMessageId] = msgRes.data.payload;
+                            }
+                        }
+                    }).catch(() => { });
+                }
+            });
         } else {
             conversations.value = mockConversations;
         }
@@ -133,11 +151,18 @@ const formatTime = (timeStr: string) => {
 };
 
 const getLastMsgSnippet = (conv: ConversationDTO) => {
+    if (conv.lastMessageId && lastMessagesMap.value[conv.lastMessageId]) {
+        return lastMessagesMap.value[conv.lastMessageId];
+    }
     if (conv.id === '1') return '[图片]';
     if (conv.id === '2') return '好的，下午见！';
     if (conv.id === '3') return '欢迎使用微信。';
-    return '最近的一条消息内容...';
+    return '...';
 };
+
+defineExpose({
+    fetchConversations
+});
 </script>
 
 <style scoped>

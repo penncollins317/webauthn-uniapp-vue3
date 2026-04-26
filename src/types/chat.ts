@@ -41,3 +41,21 @@ export interface MessageDTO {
     referenceId: string | null;
     createdAt: string;
 }
+
+export interface NotificationMessage {
+    notificationId: string | null;
+    bizType: string;
+    receiverId: string;
+    payload: string;
+    priority: number | null;
+    channels: string[];
+    metadata: any;
+}
+
+export interface ChatMessagePayload {
+    conversationId: string;
+    eventType: string | null;
+    messageId: string;
+    senderId: string;
+    type: string;
+}

@@ -5,8 +5,8 @@ interface RequestOptions {
     url: string;
     method?: RequestMethod;
     data?: any;
+    params?: any;
     header?: Record<string, any>;
-    showLoading?: boolean;
 }
 
 const BASE_URL = import.meta.env.VITE_SERVER_URL
@@ -20,28 +20,31 @@ const getToken = () => {
     return "";
 };
 
-// 统一请求函数
+/**
+ * 统一请求函数 (基础版本，无 Loading)
+ */
 const request = <T = any>(options: RequestOptions): Promise<T> => {
     const {
         url,
         method = "GET",
         data = {},
-        header = {},
-        showLoading = true
+        params = {},
+        header = {}
     } = options;
 
-    if (showLoading) {
-        uni.showLoading({ title: "加载中..." });
-    }
-
     return new Promise((resolve, reject) => {
-        console.log('BASE_URL:', BASE_URL)
-        console.log(url)
+        let requestUrl = url;
+        if (params && Object.keys(params).length > 0) {
+            const query = Object.keys(params)
+                .map(key => `${key}=${params[key]}`)
+                .join("&");
+            requestUrl += (requestUrl.includes("?") ? "&" : "?") + query;
+        }
 
         uni.request({
-            url: BASE_URL + url,
+            url: BASE_URL + requestUrl,
             method,
-            data,
+            data: data,
             header: {
                 "Accept": "application/json",
                 Authorization: getToken() ? `Bearer ${getToken()}` : "",
@@ -52,32 +55,29 @@ const request = <T = any>(options: RequestOptions): Promise<T> => {
                     statusCode: number;
                     data: T;
                 }
-
-                // HTTP 层错误
                 if (statusCode !== 200) {
-                    uni.showToast({
-                        title: "请求失败",
-                        icon: "none"
-                    });
+                    uni.showToast({ title: "请求失败", icon: "none" });
                     reject(res);
                     return;
                 }
                 resolve(data)
             },
             fail: (err) => {
-                uni.showToast({
-                    title: "网络错误",
-                    icon: "none"
-                });
+                uni.showToast({ title: "网络错误", icon: "none" });
                 reject(err);
-            },
-            complete: () => {
-                if (showLoading) {
-                    uni.hideLoading();
-                }
             }
         });
     });
 };
 
-export default request;
+/**
+ * Loading 包装器
+ */
+export const withLoading = <T>(promise: Promise<T>, title = "加载中..."): Promise<T> => {
+    uni.showLoading({ title, mask: true });
+    return promise.finally(() => {
+        uni.hideLoading();
+    });
+};
+
+export default request;

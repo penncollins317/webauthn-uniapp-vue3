@@ -9,14 +9,14 @@ export const getConversations = (): Promise<ApiResponse<ConversationDTO[]>> => {
     })
 }
 
-
 export const getMessages = (req: PullMessageRequest): Promise<ApiResponse<MessageDTO[]>> => {
     return request({
         url: "/api/chat/messages",
         method: 'GET',
-        data: req
+        params: req
     })
 }
+
 export const sendMessage = (req: SendMessageRequest): Promise<ApiResponse<MessageDTO>> => {
     return request({
         url: "/api/chat/messages",
@@ -24,3 +24,20 @@ export const sendMessage = (req: SendMessageRequest): Promise<ApiResponse<Messag
         data: req
     })
 }
+
+export const getMessage = (messageId: string): Promise<ApiResponse<MessageDTO>> => {
+    return request({
+        url: `/api/chat/messages/${messageId}`,
+        method: 'GET'
+    })
+}
+
+// POST /api/chat/conversations/{conversationId}/read?messageId={messageId}
+export const readMessage = (conversationId: string, messageId: string): Promise<ApiResponse<void>> => {
+    return request({
+        url: `/api/chat/conversations/${conversationId}/read`,
+        method: 'POST',
+        params: { messageId }
+    })
+}
+

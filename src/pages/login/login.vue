@@ -33,6 +33,7 @@
 import { AuthServie } from "@/service";
 import { reactive } from "vue";
 import { requestAuthenticationOptions, webAuthnLogin } from "@/api/auth";
+import { withLoading } from "@/utils/request";
 import { generateUUID } from "@/utils/uuid";
 import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from "@/utils/webauthn";
 
@@ -61,7 +62,7 @@ const handleLogin = async () => {
         return;
     }
 
-    await authService.login(form.username, form.password)
+    await withLoading(authService.login(form.username, form.password))
 
     uni.showToast({
         title: "登录成功",
@@ -78,7 +79,7 @@ const handleWebAuthnLogin = async () => {
     const keyId = generateUUID();
     try {
         // 1. 获取认证选项
-        const options = await requestAuthenticationOptions(keyId);
+        const options = await withLoading(requestAuthenticationOptions(keyId));
 
         // 2. 解码关键字段
         options.challenge = base64UrlToArrayBuffer(options.challenge);
@@ -113,7 +114,7 @@ const handleWebAuthnLogin = async () => {
         console.log("WebAuthn Login Payload:", payload);
 
         // 5. 提交登录
-        const res = await authService.handleWebAuthnLogin(payload, keyId);
+        const res = await withLoading(authService.handleWebAuthnLogin(payload, keyId));
         if (res.errcode === 0) {
             uni.showToast({ title: "Passkey 登录成功", icon: "success" });
             uni.reLaunch({ url: "/pages/user/me" });
