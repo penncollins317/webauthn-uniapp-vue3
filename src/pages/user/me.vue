@@ -67,9 +67,8 @@ onMounted(() => {
 });
 
 // 退出登录
-const handleLogout = () => {
-    authService.removeToken();
-
+const handleLogout = async () => {
+    await authService.logout();
     uni.navigateTo({
         url: "/pages/login/login"
     });

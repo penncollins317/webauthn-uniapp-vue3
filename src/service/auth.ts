@@ -1,10 +1,16 @@
-import { loginApi, userinfoApi, webAuthnLogin, wxloginApi } from "@/api/auth";
+import { loginApi, logoutApi, userinfoApi, webAuthnLogin, wxloginApi } from "@/api/auth";
 import type { ApiResponse, TokenDTO } from "@/types";
 
 export class AuthServie {
     async getUserinfo() {
         return userinfoApi()
     }
+    async logout() {
+        await logoutApi()
+        this.removeToken()
+        uni.removeStorageSync("userinfo")
+    }
+
     async login(username: string, password: string) {
         const res = await loginApi(username, password)
         await this.handleLoginResponse(res)

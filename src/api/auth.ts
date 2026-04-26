@@ -1,6 +1,20 @@
 import type { ApiResponse, TokenDTO, UserInfoDTO, UserPasskey } from '@/types'
 import request from '../utils/request'
 
+// GET /api/auth/logout?token=rt.a8S-DThJa7BFNdQmA84NZ3vwFwhiXjevG__6PRlANbY
+export const logoutApi = () => {
+    const token = uni.getStorageSync('token')
+    if (!token) {
+        return
+    }
+    return request<ApiResponse<void>>({
+        url: '/api/auth/logout',
+        method: 'GET',
+        params: {
+            token: token.refreshToken
+        }
+    })
+}
 
 export const loginApi = (username: string, password: string) => {
     return request<ApiResponse<TokenDTO>>({
