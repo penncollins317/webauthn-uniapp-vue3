@@ -60,3 +60,18 @@ export const sendWebRTCSignaling = (data: any): Promise<ApiResponse<void>> => {
         data
     })
 }
+
+
+
+interface IceConfigDTO {
+    urls: string[];
+    username: string;
+    credential: string;
+}
+
+export const getIceConfigApi = (): Promise<ApiResponse<IceConfigDTO>> => {
+    return request({
+        url: "/api/chat/webrtc/ice",
+        method: 'GET'
+    })
+}

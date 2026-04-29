@@ -178,17 +178,61 @@ watch(() => state.remoteStream, (stream) => {
         bgAudio.play()
           .then(() => console.log('[WebRTC] 语音流播放成功'))
           .catch(e => console.error('[WebRTC] 语音流播放失败', e));
-      } else if (remoteVideoRef.value) {
+      } else {
         // 视频模式：通过模板中的 video 播放
-        remoteVideoRef.value.play()
-          .then(() => console.log('[WebRTC] 视频流播放成功'))
-          .catch(err => {
-            console.warn('[WebRTC] 视频播放失败，尝试重新绑定', err);
-            remoteVideoRef.value!.srcObject = stream;
-            remoteVideoRef.value!.play();
-          });
+        // 兼容处理：在 Uni-app 中，ref 可能指向组件包装器而非原生 video 元素
+        const el = remoteVideoRef.value as any;
+        const video = el ? (el.tagName === 'VIDEO' ? el : (el.$el?.querySelector?.('video') || el.querySelector?.('video'))) : null;
+        
+        if (video && typeof video.play === 'function') {
+          if (video.srcObject !== stream) {
+            video.srcObject = stream;
+          }
+          video.play()
+            .then(() => console.log('[WebRTC] 视频流播放成功'))
+            .catch(err => {
+              if (err.name === 'AbortError') return; // 忽略播放中断错误
+              console.warn('[WebRTC] 视频播放失败，尝试重新绑定', err);
+              video.srcObject = stream;
+              video.play().catch(e => {
+                if (e.name !== 'AbortError') console.error('[WebRTC] 视频重试播放失败', e);
+              });
+            });
+        } else {
+          // 兜底方案：尝试通过 ID 获取
+          const backupVideo = document.getElementById('remoteVideo') as any;
+          const realBackupVideo = backupVideo ? (backupVideo.tagName === 'VIDEO' ? backupVideo : backupVideo.querySelector?.('video')) : null;
+          if (realBackupVideo && typeof realBackupVideo.play === 'function') {
+            if (realBackupVideo.srcObject !== stream) {
+              realBackupVideo.srcObject = stream;
+            }
+            realBackupVideo.play().catch(e => {
+              if (e.name !== 'AbortError') console.error('[WebRTC] 兜底视频播放失败', e);
+            });
+          } else {
+            console.error('[WebRTC] 无法找到有效的 video 元素播放远程流');
+          }
+        }
       }
-    }, 300);
+    }, 500);
+  }
+});
+
+// 监听本地流变化，确保本地预览也能正常播放
+watch(() => state.localStream, (stream) => {
+  if (stream && !state.isAudioOnly) {
+    setTimeout(() => {
+      const el = document.getElementById('localVideo') as any;
+      const video = el ? (el.tagName === 'VIDEO' ? el : (el.$el?.querySelector?.('video') || el.querySelector?.('video'))) : null;
+      if (video && typeof video.play === 'function') {
+        if (video.srcObject !== stream) {
+          video.srcObject = stream;
+        }
+        video.play().catch(e => {
+          if (e.name !== 'AbortError') console.warn('[WebRTC] 本地视频播放失败', e);
+        });
+      }
+    }, 500);
   }
 });
 

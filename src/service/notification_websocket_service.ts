@@ -1,6 +1,6 @@
 import type { NotificationMessage, ChatMessagePayload } from '@/types';
-
-class ChatNotificationService {
+let baseUrl = import.meta.env.VITE_SERVER_URL;
+class NotificationWebsocketService {
     private socketTask: UniApp.SocketTask | null = null;
     private handlers: Map<string, Set<(payload: any) => void>> = new Map();
     private reconnectTimer: any = null;
@@ -26,11 +26,11 @@ class ChatNotificationService {
         const tokenData = uni.getStorageSync('token');
         const token = tokenData?.accessToken;
         if (!token) {
-            console.warn('[ChatSDK] No access token found, skipping WebSocket connection');
+            console.warn('[NotificationWS] No access token found, skipping WebSocket connection');
             return;
         }
 
-        let baseUrl = import.meta.env.VITE_SERVER_URL;
+
 
         // #ifdef H5
         // Web/H5 环境：根据当前页面的协议动态判断
@@ -51,18 +51,18 @@ class ChatNotificationService {
         // #endif
 
         const url = `${baseUrl}/ws/notifications?access_token=${token}`;
-        console.log('[ChatSDK] Connecting to:', url);
+        console.log('[NotificationWS] Connecting to:', url);
 
         this.socketTask = uni.connectSocket({
             url,
             fail: (err) => {
-                console.error('[ChatSDK] connectSocket failed', err);
+                console.error('[NotificationWS] connectSocket failed', err);
                 this.reconnect();
             }
         });
 
         this.socketTask.onOpen(() => {
-            console.log('[ChatSDK] WebSocket opened');
+            console.log('[NotificationWS] WebSocket opened');
             if (this.reconnectTimer) {
                 clearTimeout(this.reconnectTimer);
                 this.reconnectTimer = null;
@@ -74,7 +74,7 @@ class ChatNotificationService {
         });
 
         this.socketTask.onClose((res) => {
-            console.log('[ChatSDK] WebSocket closed', res);
+            console.log('[NotificationWS] WebSocket closed', res);
             this.socketTask = null;
             if (!this.isManualClose) {
                 this.reconnect();
@@ -82,7 +82,7 @@ class ChatNotificationService {
         });
 
         this.socketTask.onError((err) => {
-            console.error('[ChatSDK] WebSocket error', err);
+            console.error('[NotificationWS] WebSocket error', err);
             this.socketTask = null;
             this.reconnect();
         });
@@ -92,21 +92,36 @@ class ChatNotificationService {
         try {
             const raw = typeof data === 'string' ? data : this.arrayBufferToString(data);
             const msg: NotificationMessage = JSON.parse(raw);
-            console.log('[ChatSDK] Received notification:', msg);
+            console.log('[NotificationWS] Received notification:', msg);
 
             if (msg.bizType === 'CHAT_MESSAGE') {
                 const payload: ChatMessagePayload = JSON.parse(msg.payload);
                 this.emit('CHAT_MESSAGE', payload);
+                // 增加弹窗，提示有新消息
+                async function notify() {
+                    if (Notification.permission !== "granted") {
+                        const permission = await Notification.requestPermission()
+                        if (permission !== "granted") return
+                    }
+
+                    new Notification(msg.title || '收到新消息', {
+                        body: msg.body || '收到一条新消息',
+                        icon: "/static/favicon.ico",
+                        tag: msg.bizType
+                    })
+                }
+                notify();
+
             } else if (msg.bizType === 'WEBRTC_CALL') {
                 const payload = JSON.parse(msg.payload);
-                console.log('[ChatSDK] Received WebRTC call notification:', payload);
+                console.log('[NotificationWS] Received WebRTC call notification:', payload);
                 this.emit('WEBRTC_CALL', payload);
             }
             else {
                 this.emit(msg.bizType, msg.payload);
             }
         } catch (e) {
-            console.error('[ChatSDK] Failed to parse message', e, data);
+            console.error('[NotificationWS] Failed to parse message', e, data);
         }
     }
 
@@ -122,7 +137,7 @@ class ChatNotificationService {
 
     private reconnect() {
         if (this.reconnectTimer || this.isManualClose) return;
-        console.log('[ChatSDK] Scheduling reconnection in 5s...');
+        console.log('[NotificationWS] Scheduling reconnection in 5s...');
         this.reconnectTimer = setTimeout(() => {
             this.reconnectTimer = null;
             this.connect();
@@ -157,7 +172,7 @@ class ChatNotificationService {
                 try {
                     handler(payload);
                 } catch (e) {
-                    console.error(`[ChatSDK] Error in handler for ${bizType}`, e);
+                    console.error(`[NotificationWS] Error in handler for ${bizType}`, e);
                 }
             });
         }
@@ -179,4 +194,4 @@ class ChatNotificationService {
     }
 }
 
-export const chatNotificationService = new ChatNotificationService();
+export const notificationWebsocketService = new NotificationWebsocketService();

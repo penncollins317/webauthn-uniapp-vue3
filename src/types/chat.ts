@@ -50,6 +50,8 @@ export interface NotificationMessage {
     priority: number | null;
     channels: string[];
     metadata: any;
+    title?: string;
+    body?: string;
 }
 
 export interface ChatMessagePayload {
@@ -58,4 +60,5 @@ export interface ChatMessagePayload {
     messageId: string;
     senderId: string;
     type: string;
-}
+
+}

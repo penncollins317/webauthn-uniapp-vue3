@@ -92,6 +92,8 @@ const doRefreshToken = async (): Promise<string> => {
                 if (res.statusCode === 200 && res.data && res.data.errcode === 0) {
                     const newTokenObj = res.data.data;
                     uni.setStorageSync("token", newTokenObj);
+                    // 刷新token后发送事件重新连接websocket
+                    uni.$emit('auth:token_refresh')
                     resolve(newTokenObj.accessToken);
                 } else {
                     logout();

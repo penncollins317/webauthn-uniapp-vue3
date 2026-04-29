@@ -23,7 +23,7 @@ import ChatWindow from '@/components/chat/chat_window.vue';
 import type { ConversationDTO, MessageDTO } from '@/types';
 import { getMessages, sendMessage, readMessage, getMessage } from '@/api/chat';
 import { userinfoApi } from '@/api/auth';
-import { chatNotificationService } from '@/service/chat_service';
+import { notificationWebsocketService } from '@/service/notification_websocket_service';
 import { withLoading } from '@/utils/request';
 import type { ChatMessagePayload } from '@/types';
 import WebRTCCallOverlay from '@/components/WebRTCCallOverlay.vue';
@@ -110,14 +110,13 @@ onMounted(async () => {
         console.error('Failed to fetch user info', e)
     }
 
-    // 链接websocket
-    chatNotificationService.init();
-    chatNotificationService.on('CHAT_MESSAGE', handleIncomingMessage);
+    // 链接websocket由 auth 负责
+    notificationWebsocketService.on('CHAT_MESSAGE', handleIncomingMessage);
 })
 
 import { onUnmounted } from 'vue';
 onUnmounted(() => {
-    chatNotificationService.off('CHAT_MESSAGE', handleIncomingMessage);
+    notificationWebsocketService.off('CHAT_MESSAGE', handleIncomingMessage);
 });
 
 const handleIncomingMessage = async (payload: ChatMessagePayload) => {

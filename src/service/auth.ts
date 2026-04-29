@@ -9,6 +9,7 @@ export class AuthServie {
         await logoutApi()
         this.removeToken()
         uni.removeStorageSync("userinfo")
+        uni.$emit('auth:logout')
     }
 
     async login(username: string, password: string) {
@@ -36,6 +37,7 @@ export class AuthServie {
         if (userinfoRes.errcode === 0 && userinfoRes.data) {
             uni.setStorageSync("userinfo", userinfoRes.data)
         }
+        uni.$emit('auth:login')
     }
     storeToken(token: TokenDTO) {
         uni.setStorageSync("token", token)

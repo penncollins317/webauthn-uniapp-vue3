@@ -49,14 +49,14 @@
                 <text class="btn-text">音视频通话</text>
             </button>
         </view>
-        
+
         <!-- WebRTC 通话蒙层 -->
         <WebRTCCallOverlay />
     </view>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { createConversation } from '@/api/chat'
 import { callController } from '@/service/webrtc_call'
@@ -66,8 +66,8 @@ const userInfo = ref({
     id: '',
     name: '加载中...',
     avatar: '',
-    wechatId: 'wx_user_' + Math.floor(Math.random() * 10000),
-    region: '广东 深圳',
+    wechatId: '',
+    region: '',
     gender: 'male',
     moments: [
         'https://api.dicebear.com/7.x/shapes/svg?seed=1',
@@ -118,7 +118,7 @@ const sendMessage = async () => {
 
 const makeCall = () => {
     if (!userInfo.value.id) return
-    
+
     uni.showActionSheet({
         itemList: ['视频通话', '语音通话'],
         success: (res) => {

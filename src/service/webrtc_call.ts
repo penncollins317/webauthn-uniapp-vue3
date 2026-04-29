@@ -1,11 +1,11 @@
 import { reactive } from 'vue';
-import { chatNotificationService } from './chat_service';
-import { sendWebRTCSignaling } from '@/api/chat';
+import { notificationWebsocketService } from './notification_websocket_service';
+import { getIceConfigApi, sendWebRTCSignaling } from '@/api/chat';
 
 /**
  * 【消息结构】
  */
-export type SignalingType = 
+export type SignalingType =
   | 'call_invite' | 'call_accept' | 'call_reject' | 'hangup'
   | 'offer' | 'answer' | 'ice_candidate';
 
@@ -34,7 +34,7 @@ export interface WebRTCAdapter {
   addIceCandidate(candidate: RTCIceCandidateInit): Promise<void>;
   getLocalStream(video?: boolean, audio?: boolean): Promise<MediaStream>;
   close(): void;
-  
+
   onIceCandidate?: (candidate: RTCIceCandidate) => void;
   onTrack?: (stream: MediaStream) => void;
 }
@@ -64,16 +64,25 @@ export class WebWebRTCAdapter implements WebRTCAdapter {
   async getLocalStream(video = true, audio = true): Promise<MediaStream> {
     try {
       console.log('[WebRTC] 请求媒体权限:', { video, audio });
+      // 检查媒体设备是否可用
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('当前浏览器不支持 getUserMedia');
+      }
       return await navigator.mediaDevices.getUserMedia({ video, audio });
-    } catch (e) {
-      console.warn('[WebRTC] 媒体请求失败，尝试降级...', e);
+    } catch (e: any) {
+      console.warn(`[WebRTC] 媒体请求失败 (${e.name}):`, e.message);
+
+      // 针对常见错误的降级策略
       if (video && audio) {
-        try { return await navigator.mediaDevices.getUserMedia({ video: false, audio: true }); }
-        catch (e2) {
-          try { return await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
-          catch (e3) { return new MediaStream(); }
+        console.log('[WebRTC] 尝试降级：仅请求音频');
+        try {
+          return await navigator.mediaDevices.getUserMedia({ video: false, audio: true });
+        } catch (e2) {
+          console.warn('[WebRTC] 降级请求音频也失败');
         }
       }
+
+      // 实在拿不到就返回空流，避免上层崩溃
       return new MediaStream();
     }
   }
@@ -101,6 +110,11 @@ export class WebWebRTCAdapter implements WebRTCAdapter {
     await this.pc?.addIceCandidate(candidate);
   }
 
+  addTransceiver(kind: 'audio' | 'video', direction: RTCRtpTransceiverDirection = 'sendrecv') {
+    console.log(`[WebRTC] 添加收发器: ${kind}, 方向: ${direction}`);
+    this.pc?.addTransceiver(kind, { direction });
+  }
+
   close() {
     console.log('[WebRTC] 关闭连接');
     this.pc?.getSenders().forEach(sender => {
@@ -123,7 +137,7 @@ export class WebWebRTCAdapter implements WebRTCAdapter {
 export class SignalingClient {
   constructor(private onMessage: (msg: SignalingMessage) => void) {
     console.log('[WebRTC] SignalingClient 已启动并监听 WEBRTC_CALL');
-    chatNotificationService.on('WEBRTC_CALL', (payload) => {
+    notificationWebsocketService.on('WEBRTC_CALL', (payload) => {
       console.log('[WebRTC] SignalingClient 收到原始推送 payload:', payload);
       this.onMessage(payload);
     });
@@ -153,21 +167,62 @@ export class CallController {
   private adapter: WebRTCAdapter;
   private signaling: SignalingClient;
   private iceCandidateQueue: RTCIceCandidateInit[] = [];
+  private iceConfigLoadPromise: Promise<void> | null = null;
   private rtcConfig: RTCConfiguration = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+    iceServers: [{
+      urls: [
+        'stun:stun.l.google.com:19302',
+        'turn:turn.echovoid.top:3478'
+      ],
+      username: 'echo',
+      credential: 'hellomixin6879'
+    }]
   };
 
   constructor(adapter: WebRTCAdapter) {
     this.adapter = adapter;
     this.signaling = new SignalingClient((msg) => this.handleSignaling(msg));
-    
+
+    this.iceConfigLoadPromise = this.loadRtcConfig();
+
     this.adapter.onIceCandidate = (candidate) => {
       this.sendSignaling('ice_candidate', candidate);
     };
-    
+
+    this.adapter.onIceCandidate = (candidate) => {
+      this.sendSignaling('ice_candidate', candidate);
+    };
+
     this.adapter.onTrack = (stream) => {
       this.state.remoteStream = stream;
     };
+  }
+
+  private async loadRtcConfig(): Promise<void> {
+    try {
+      const res = await getIceConfigApi();
+      if (res.errcode === 0 && res.data && Array.isArray(res.data.urls) && res.data.urls.length > 0) {
+        this.rtcConfig = {
+          iceServers: [{
+            urls: res.data.urls,
+            username: res.data.username,
+            credential: res.data.credential,
+          }]
+        };
+        console.log('[WebRTC] ICE 配置已加载', this.rtcConfig);
+        return;
+      }
+      console.warn('[WebRTC] ICE 配置接口返回异常，使用默认配置', res);
+    } catch (error) {
+      console.warn('[WebRTC] 获取 ICE 配置失败，使用默认配置', error);
+    }
+  }
+
+  private async ensureRtcConfig(): Promise<void> {
+    if (!this.iceConfigLoadPromise) {
+      this.iceConfigLoadPromise = this.loadRtcConfig();
+    }
+    await this.iceConfigLoadPromise;
   }
 
   async callUser(userId: string, audioOnly = false) {
@@ -183,6 +238,7 @@ export class CallController {
 
     try {
       this.state.localStream = await this.adapter.getLocalStream(!audioOnly, true);
+      this.syncCapabilities();
       await this.sendSignaling('call_invite', { audioOnly });
     } catch (e) {
       console.error('[WebRTC] 发起呼叫失败:', e);
@@ -196,9 +252,29 @@ export class CallController {
     console.log('[WebRTC] 接听通话');
     try {
       this.state.localStream = await this.adapter.getLocalStream(!this.state.isAudioOnly, true);
+      this.syncCapabilities();
+      await this.ensureRtcConfig();
       this.adapter.init(this.rtcConfig);
-      (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
-      
+
+      // 核心修复：确保即使没有本地视频，也要协商视频通道
+      if (!this.state.isAudioOnly) {
+        const hasVideo = this.state.localStream?.getVideoTracks().length > 0;
+        if (!hasVideo) {
+          (this.adapter as WebWebRTCAdapter).addTransceiver('video', 'recvonly');
+        } else {
+          (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
+        }
+        // 同时也添加音频
+        if (this.state.localStream?.getAudioTracks().length > 0) {
+          // 如果已经通过 addTrack 添加了视频，则这里只添加音频
+          // 但为了简单，如果没视频则 addTransceiver + addTrack(audio)
+          // 如果有视频则直接 addTrack(stream) 已经包含全轨道
+          if (!hasVideo) (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
+        }
+      } else {
+        (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
+      }
+
       this.state.status = 'in_call';
       await this.sendSignaling('call_accept', {});
     } catch (e) {
@@ -235,6 +311,24 @@ export class CallController {
     this.reset();
   }
 
+  private syncCapabilities() {
+    if (!this.state.localStream) return;
+    const hasVideo = this.state.localStream.getVideoTracks().length > 0;
+    const hasAudio = this.state.localStream.getAudioTracks().length > 0;
+
+    // 如果请求了视频但实际没拿到（由于硬件缺失或拒绝），更新状态
+    if (!this.state.isAudioOnly && !hasVideo) {
+      console.warn('[WebRTC] 未检测到摄像头，自动切换到无摄像头状态');
+      this.state.videoEnabled = false;
+    }
+
+    // 检查麦克风
+    if (!hasAudio) {
+      console.warn('[WebRTC] 未检测到麦克风');
+      this.state.audioEnabled = false;
+    }
+  }
+
   private reset() {
     this.adapter.close();
     this.state.status = 'idle';
@@ -249,7 +343,7 @@ export class CallController {
 
   private async sendSignaling(type: SignalingType, data: any) {
     if (!this.state.currentCallId && type !== 'call_invite') return;
-    
+
     const userinfo = uni.getStorageSync('userinfo');
     const fromId = userinfo?.id || 'anonymous';
 
@@ -274,8 +368,8 @@ export class CallController {
 
     let parsedData: any = null;
     try {
-      parsedData = typeof msg.data === 'string' && (msg.data.startsWith('{') || msg.data.startsWith('[')) 
-        ? JSON.parse(msg.data) 
+      parsedData = typeof msg.data === 'string' && (msg.data.startsWith('{') || msg.data.startsWith('['))
+        ? JSON.parse(msg.data)
         : msg.data;
     } catch (e) {
       parsedData = msg.data;
@@ -293,10 +387,24 @@ export class CallController {
       case 'call_accept':
         console.log('[WebRTC] 对方已接听，开始建立连接');
         this.state.status = 'in_call';
+        await this.ensureRtcConfig();
         this.adapter.init(this.rtcConfig);
-        if (this.state.localStream) {
+
+        // 核心修复：确保即使没有本地视频，也要协商视频通道
+        if (!this.state.isAudioOnly) {
+          const hasVideo = this.state.localStream?.getVideoTracks().length > 0;
+          if (!hasVideo) {
+            (this.adapter as WebWebRTCAdapter).addTransceiver('video', 'recvonly');
+          } else {
+            (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
+          }
+          if (!hasVideo && this.state.localStream) {
+            (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
+          }
+        } else if (this.state.localStream) {
           (this.adapter as WebWebRTCAdapter).addTrack(this.state.localStream);
         }
+
         const offer = await this.adapter.createOffer();
         await this.adapter.setLocalDescription(offer);
         await this.sendSignaling('offer', offer);
@@ -332,10 +440,10 @@ export class CallController {
 
   private async processIceQueue() {
     if (this.state.status !== 'in_call') return;
-    
+
     const candidates = [...this.iceCandidateQueue];
     this.iceCandidateQueue = [];
-    
+
     for (const cand of candidates) {
       try {
         await this.adapter.addIceCandidate(cand);
