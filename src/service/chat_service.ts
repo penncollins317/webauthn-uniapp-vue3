@@ -88,7 +88,7 @@ class ChatNotificationService {
         });
     }
 
-    private handleRawMessage(data: string | ArrayBuffer) {
+    private async handleRawMessage(data: string | ArrayBuffer) {
         try {
             const raw = typeof data === 'string' ? data : this.arrayBufferToString(data);
             const msg: NotificationMessage = JSON.parse(raw);
@@ -97,7 +97,12 @@ class ChatNotificationService {
             if (msg.bizType === 'CHAT_MESSAGE') {
                 const payload: ChatMessagePayload = JSON.parse(msg.payload);
                 this.emit('CHAT_MESSAGE', payload);
-            } else {
+            } else if (msg.bizType === 'WEBRTC_CALL') {
+                const payload = JSON.parse(msg.payload);
+                console.log('[ChatSDK] Received WebRTC call notification:', payload);
+                this.emit('WEBRTC_CALL', payload);
+            }
+            else {
                 this.emit(msg.bizType, msg.payload);
             }
         } catch (e) {

@@ -12,6 +12,9 @@
       <navigator url="/pages/live/live">
         <button>开启直播</button>
       </navigator>
+      <navigator url="/pages/user/me">
+        <button>我的</button>
+      </navigator>
     </view>
   </view>
 </template>

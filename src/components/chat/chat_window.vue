@@ -9,7 +9,7 @@
                 <uni-icons type="left" size="24" color="#000"></uni-icons>
             </view>
             <view class="title">{{ conversation?.name || '聊天' }}</view>
-            <view class="right-action">
+            <view class="right-action" @tap="goToUserCard">
                 <uni-icons type="more-filled" size="24" color="#000"></uni-icons>
             </view>
         </view>
@@ -84,6 +84,22 @@ const sendMessage = () => {
     inputFocus.value = false;
     nextTick(() => {
         inputFocus.value = true;
+    });
+};
+
+const goToUserCard = () => {
+    if (!props.conversation) return;
+
+    // Try to determine the user ID. 
+    // In this app, for USER type conversations, we can try to find it from messages 
+    // or use the conversation ID if they are the same (depends on backend).
+    // Given the context of user_card.vue, we need an ID, name, and avatar.
+    const myId = props.currentUser?.id || uni.getStorageSync('userId');
+    const otherMsg = props.messages.find(m => m.userId && m.userId !== myId);
+    const userId = otherMsg ? otherMsg.userId : props.conversation.id;
+
+    uni.navigateTo({
+        url: `/pages/user/user_card?id=${userId}&name=${encodeURIComponent(props.conversation.name)}&avatar=${encodeURIComponent(props.conversation.avatarUrl || '')}`
     });
 };
 

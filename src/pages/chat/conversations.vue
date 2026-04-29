@@ -10,6 +10,9 @@
                     @close="showChat = false" @send="handleSend" @loadHistory="fetchHistoryMessages" />
             </view>
         </transition>
+
+        <!-- WebRTC 通话蒙层 -->
+        <WebRTCCallOverlay />
     </view>
 </template>
 
@@ -23,6 +26,7 @@ import { userinfoApi } from '@/api/auth';
 import { chatNotificationService } from '@/service/chat_service';
 import { withLoading } from '@/utils/request';
 import type { ChatMessagePayload } from '@/types';
+import WebRTCCallOverlay from '@/components/WebRTCCallOverlay.vue';
 
 const showChat = ref(false);
 const selectedConv = ref<ConversationDTO | null>(null);

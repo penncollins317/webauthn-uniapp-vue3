@@ -49,6 +49,9 @@
                 <text class="btn-text">音视频通话</text>
             </button>
         </view>
+        
+        <!-- WebRTC 通话蒙层 -->
+        <WebRTCCallOverlay />
     </view>
 </template>
 
@@ -56,6 +59,8 @@
 import { ref, onMounted } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import { createConversation } from '@/api/chat'
+import { callController } from '@/service/webrtc_call'
+import WebRTCCallOverlay from '@/components/WebRTCCallOverlay.vue'
 
 const userInfo = ref({
     id: '',
@@ -112,10 +117,13 @@ const sendMessage = async () => {
 }
 
 const makeCall = () => {
+    if (!userInfo.value.id) return
+    
     uni.showActionSheet({
         itemList: ['视频通话', '语音通话'],
         success: (res) => {
-            console.log('选择：', res.tapIndex)
+            const isAudioOnly = res.tapIndex === 1
+            callController.callUser(userInfo.value.id, isAudioOnly)
         }
     })
 }

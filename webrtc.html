@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>WebRTC Test</title>
+</head>
+
+<body>
+    <button onclick="startCall()">Start Call</button>
+
+    <script>
+
+        let pc;
+        let ws;
+        async function getToken() {
+            const loginRes = await fetch("http://localhost:8080/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: "echo",
+                    password: "mixin6879"
+                })
+            })
+            const loginData = await loginRes.json();
+            const accessToken = loginData.data.accessToken
+            return accessToken;
+        }
+
+        function initWS() {
+            ws = new WebSocket("ws://localhost:8080/ws/webrtc/2047136892175921154");
+
+            ws.onopen = () => {
+                console.log("WS connected");
+            };
+
+            ws.onmessage = async (event) => {
+                const msg = JSON.parse(event.data);
+                console.log("收到消息:", msg);
+
+                if (msg.type === "answer") {
+                    await pc.setRemoteDescription(
+                        new RTCSessionDescription(JSON.parse(msg.data))
+                    );
+                }
+
+                if (msg.type === "ice_candidate") {
+                    await pc.addIceCandidate(JSON.parse(msg.data));
+                }
+            };
+        }
+
+        async function startCall() {
+
+            initWS();
+
+            pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: "stun:stun.l.google.com:19302" }
+                ]
+            });
+
+            // ICE 回传给后端
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    ws.send(JSON.stringify({
+                        callId: "123",
+                        to: "1",
+                        type: "ice_candidate",
+                        data: JSON.stringify(event.candidate)
+                    }));
+                }
+            };
+
+            // ✔ 创建 offer（正确）
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+
+
+            console.log("offer:", offer);
+            // ✔ 调你的 Java 接口
+            fetch("http://localhost:8080/api/chat/webrtc/signal/send", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${await getToken()}`
+                },
+                body: JSON.stringify({
+                    callId: "123",
+                    to: "1",
+                    type: "offer",
+                    data: JSON.stringify(offer)
+                })
+            });
+
+            console.log("offer 已发送");
+        }
+
+    </script>
+
+</body>
+
+</html>

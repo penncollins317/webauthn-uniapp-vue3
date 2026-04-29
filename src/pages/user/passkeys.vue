@@ -31,6 +31,7 @@ import { getUserPasskeys, deleteUserPasskey, requestRegistrationOptions, submitR
 import type { UserPasskey } from '@/types/auth';
 import { generateUUID } from '@/utils/uuid';
 import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from '@/utils/webauthn';
+import { getDeviceName } from '@/utils/env_utils';
 
 const passkeys = ref<UserPasskey[]>([]);
 const loading = ref(false);
@@ -71,7 +72,6 @@ const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 };
-
 const startAuth = async () => {
     if (!window?.navigator?.credentials) {
         uni.showToast({
@@ -100,10 +100,19 @@ const startAuth = async () => {
 
         // 3. 呼起生物识别
         const credential = await navigator.credentials.create({ publicKey: options }) as any;
-        
-        // 4. 关键：手动构造返回给 Spring 的 JSON
-        const clientExtensionResults = credential.getClientExtensionResults ? credential.getClientExtensionResults() : {};
 
+        // 4. 关键：手动构造返回给 Spring 的 JSON
+        let clientExtensionResults = {};
+        if (credential.getClientExtensionResults) {
+            const raw = credential.getClientExtensionResults();
+
+            clientExtensionResults = {};
+
+            // 只在是 boolean 时才传
+            if (typeof raw.rk === 'boolean') {
+                clientExtensionResults.rk = raw.rk;
+            }
+        }
         // 尝试获取 Transports
         let transports = ["internal"]; // 移动端平台通常默认为 internal
         if (credential.getResponse && typeof credential.getResponse === 'function') {
@@ -125,7 +134,7 @@ const startAuth = async () => {
                     },
                     clientExtensionResults: clientExtensionResults
                 },
-                label: "My Mobile Device" // 这个 label 映射到后端的描述字段
+                label: getDeviceName()
             }
         };
 

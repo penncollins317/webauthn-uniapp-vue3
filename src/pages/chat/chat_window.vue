@@ -20,9 +20,9 @@ const currentUser = ref<any>(null);
 
 onLoad((options) => {
     if (options.conversationId) {
-        selectedConv.value = { 
-            id: options.conversationId, 
-            name: decodeURIComponent(options.name || '') 
+        selectedConv.value = {
+            id: options.conversationId,
+            name: decodeURIComponent(options.name || '')
         } as ConversationDTO;
         fetchMessages(options.conversationId);
     }

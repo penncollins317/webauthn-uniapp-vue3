@@ -49,3 +49,14 @@ export const createConversation = (data: { type: string; memberIds: string[]; na
         data
     })
 }
+
+/**
+ * 发送 WebRTC 信令
+ */
+export const sendWebRTCSignaling = (data: any): Promise<ApiResponse<void>> => {
+    return request({
+        url: "/api/chat/webrtc/signal/send",
+        method: 'POST',
+        data
+    })
+}
