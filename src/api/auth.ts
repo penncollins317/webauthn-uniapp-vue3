@@ -36,6 +36,16 @@ export const wxloginApi = (code: string) => {
     })
 }
 
+export const phoneLoginApi = (phone: string) => {
+    return request<ApiResponse<TokenDTO>>({
+        url: '/api/auth/login/phone',
+        method: 'POST',
+        data: {
+            phone
+        }
+    })
+}
+
 export const refreshTokenApi = (refreshToken: string) => {
     return request<ApiResponse<TokenDTO>>({
         url: '/api/auth/refresh',

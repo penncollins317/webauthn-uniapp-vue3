@@ -3,6 +3,7 @@
         <view class="login-form">
             <view class="login-form-title">登录</view>
 
+            <!-- 账号密码登录 -->
             <!-- 用户名 -->
             <view class="login-form-item">
                 <view class="login-form-item-label">用户名</view>
@@ -30,6 +31,11 @@
             <button class="wx-btn" @click="handleWXLogin">
                 微信登录
             </button>
+
+            <!-- 手机号一键登录 -->
+            <button class="login-btn phone-login-btn" @click="handlePhoneLogin">
+                一键手机登录
+            </button>
         </view>
     </view>
 </template>
@@ -43,6 +49,7 @@ import { generateUUID } from "@/utils/uuid";
 import { arrayBufferToBase64Url, base64UrlToArrayBuffer } from "@/utils/webauthn";
 
 const authService = new AuthServie()
+
 
 const handleWXLogin = async () => {
     uni.login({
@@ -67,6 +74,82 @@ const form = reactive({
     username: "",
     password: ""
 });
+
+/**
+ * 一键手机登录流程：
+ * 1. uni.login({ provider: 'univerify' }) 拉起运营商一键登录界面，获取 access_token + openid
+ * 2. 调用云函数 uni_phone_login，传入 access_token + openid 换取真实手机号
+ * 3. 用手机号调后端接口完成登录
+ * 4. 关闭一键登录授权界面
+ */
+const handlePhoneLogin = async () => {
+    uni.login({
+        provider: 'univerify',
+        success: async (loginRes: any) => {
+            const { access_token, openid } = loginRes.authResult;
+            console.log("uni login", access_token, openid)
+            // try {
+            //     // 调用云函数获取手机号
+            //     const appid = uni.getAccountInfoSync().miniProgram.appId;
+            //     const cloudRes = await uniCloud.callFunction({
+            //         name: 'uni_phone_login',
+            //         data: {
+            //             access_token,
+            //             openid,
+            //             appid
+            //         }
+            //     });
+
+            //     const result = cloudRes.result as any;
+
+            //     if (result.errcode !== 0 || !result.phoneNumber) {
+            //         uni.showToast({
+            //             title: result.errmsg || '获取手机号失败',
+            //             icon: 'none'
+            //         });
+            //         return;
+            //     }
+
+            //     // 用手机号调后端登录
+            //     const res = await withLoading(authService.loginWithPhone(result.phoneNumber));
+
+            //     if (res.errcode === 0) {
+            //         uni.showToast({
+            //             title: '登录成功',
+            //             icon: 'success'
+            //         });
+            //         uni.reLaunch({
+            //             url: '/pages/user/me'
+            //         });
+            //     } else {
+            //         uni.showToast({
+            //             title: res?.errmsg || '登录失败',
+            //             icon: 'none'
+            //         });
+            //     }
+            // } catch (err: any) {
+            //     console.error('手机登录失败:', err);
+            //     uni.showToast({
+            //         title: err.message || '登录失败',
+            //         icon: 'none'
+            //     });
+            // } finally {
+            //     // 关闭一键登录授权界面
+            //     uni.closeAuthView();
+            // }
+        },
+        fail: (err: any) => {
+            console.error('univerify login fail:', err);
+            // 用户取消不提示
+            if (err.errCode !== 30002) {
+                uni.showToast({
+                    title: err.errMsg,
+                    icon: 'none'
+                });
+            }
+        }
+    });
+};
 
 const handleLogin = async () => {
     if (!form.username) {
@@ -187,6 +270,7 @@ const handleWebAuthnLogin = async () => {
     margin-bottom: 40rpx;
 }
 
+
 .login-form-item {
     margin-bottom: 30rpx;
 }
@@ -201,6 +285,10 @@ const handleWebAuthnLogin = async () => {
     padding: 20rpx;
     border-radius: 8rpx;
     font-size: 28rpx;
+}
+
+.phone-login-btn {
+    margin-top: 30rpx;
 }
 
 .login-btn {

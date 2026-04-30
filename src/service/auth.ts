@@ -1,4 +1,4 @@
-import { loginApi, logoutApi, userinfoApi, webAuthnLogin, wxloginApi } from "@/api/auth";
+import { loginApi, logoutApi, phoneLoginApi, userinfoApi, webAuthnLogin, wxloginApi } from "@/api/auth";
 import type { ApiResponse, TokenDTO } from "@/types";
 
 export class AuthServie {
@@ -18,6 +18,12 @@ export class AuthServie {
     }
     async loginWithWechat(code: string) {
         const res = await wxloginApi(code)
+        await this.handleLoginResponse(res)
+        return res
+    }
+
+    async loginWithPhone(phone: string) {
+        const res = await phoneLoginApi(phone)
         await this.handleLoginResponse(res)
         return res
     }
