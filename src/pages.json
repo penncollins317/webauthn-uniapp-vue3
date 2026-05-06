@@ -55,6 +55,20 @@
 			"style": {
 				"navigationBarTitleText": "Passkey 管理"
 			}
+		},
+		{
+			"path": "pages/features/wellness/index",
+			"style": {
+				"navigationBarTitleText": "康养中心",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/features/wellness/form",
+			"style": {
+				"navigationBarTitleText": "康养中心详情",
+				"navigationStyle": "custom"
+			}
 		}
 	],
 	"globalStyle": {
